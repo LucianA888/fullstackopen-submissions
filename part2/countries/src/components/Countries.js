@@ -3,7 +3,7 @@ import axios from 'axios';
 import process from 'process';
 
 const CountryInDepth = ({country}) => {
-    const api_key = process.env.OPEN_WEATHER_KEY;
+    const api_key = process.env.REACT_APP_API_KEY;
     const weatherUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${country.capital}&units=metric&appid=${api_key}`;
 
     const [weather, setWeather] = useState(null);
@@ -13,7 +13,7 @@ const CountryInDepth = ({country}) => {
 	    .get(weatherUrl)
 	    .then(response => setWeather(response.data))
 	    .catch(error => {
-		if (!api_key) console.log("API key for OpenWeather is missing. Use 'OPEN_WEATHER_KEY' env variable to set it.");
+		if (!api_key) console.log("API key for OpenWeather is missing. Set 'REACT_APP_API_KEY' env variable.");
 	    });
     }, []);
 
