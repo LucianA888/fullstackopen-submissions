@@ -14,7 +14,7 @@ const favoriteBlog = (blogs) => {
   blogs.forEach(blog => {
     if (max.likes < blog.likes) max = blog;
   })
-  return max;
+  return {title: max.title, author: max.author, likes: max.likes};
 }
 
 const mostBlogs = (blogs) => {
