@@ -1,6 +1,8 @@
 const config = require('./utils/config')
 const logger = require('./utils/logger')
 const middleware = require('./utils/middleware')
+// implicitly wraps async functions with "try -> catch -> next(error)"
+require('express-async-errors') 
 
 const blogRouter = require('./controllers/blog')
 
@@ -22,7 +24,7 @@ app.use(express.static('build'))
 app.use(express.json())
 app.use(middleware.requestLogger)
 
-app.use('/api/blog', blogRouter)
+app.use('/api/blogs', blogRouter)
 
 app.use(middleware.unknownEndpoint)
 app.use(middleware.errorHandler)
