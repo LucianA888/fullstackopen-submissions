@@ -1,6 +1,6 @@
+const jwt = require('jsonwebtoken')
 const logger = require('./logger')
 const User = require('../models/user')
-const jwt = require('jsonwebtoken')
 
 const requestLogger = (request, response, next) => {
   logger.info(request.method, request.path, request.body)
@@ -9,10 +9,9 @@ const requestLogger = (request, response, next) => {
 }
 
 const tokenExtractor = (request, response, next) => {
-  const getTokenFrom = request => {
+  const getTokenFrom = (request) => {
     const authorization = request.get('authorization')
-    if (authorization && authorization.startsWith('Bearer '))
-      return authorization.replace('Bearer ', '')
+    if (authorization && authorization.startsWith('Bearer ')) { return authorization.replace('Bearer ', '') }
     return null
   }
 
@@ -21,11 +20,9 @@ const tokenExtractor = (request, response, next) => {
 }
 
 const userExtractor = async (request, response, next) => {
-
   const getUser = async (request) => {
     const decodedToken = jwt.verify(request.token, process.env.SECRET)
-    if (!decodedToken.id)
-      return response.status(401).json({error: "Invalid token"})
+    if (!decodedToken.id) { return response.status(401).json({ error: 'Invalid token' }) }
 
     return await User.findById(decodedToken.id)
   }
@@ -34,18 +31,18 @@ const userExtractor = async (request, response, next) => {
   next()
 }
 
-const unknownEndpoint = (request, response) => response.status(404).send({error: "Unknown endpoint 404"})
+const unknownEndpoint = (request, response) => response.status(404).send({ error: 'Unknown endpoint 404' })
 
 const errorHandler = (error, request, response, next) => {
   logger.error(error.message)
 
   if (error.name === 'CastError') {
     return response.status(400).send({ error: 'Malformatted id' })
-  } else if (error.name === 'ValidationError') {
+  } if (error.name === 'ValidationError') {
     return response.status(400).json({ error: error.message })
-  } else if (error.name ===  'JsonWebTokenError') {
-    return response.status(400).json({ error: 'Token missing or invalid' })
-  } else if (error.name === 'TokenExpiredError') {
+  } if (error.name === 'JsonWebTokenError') {
+    return response.status(401).json({ error: 'Token missing or invalid' })
+  } if (error.name === 'TokenExpiredError') {
     return response.status(401).json({ error: 'token expired' })
   }
 
@@ -57,5 +54,5 @@ module.exports = {
   unknownEndpoint,
   errorHandler,
   tokenExtractor,
-  userExtractor
+  userExtractor,
 }
