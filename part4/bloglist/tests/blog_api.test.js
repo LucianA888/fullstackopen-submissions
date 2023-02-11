@@ -1,6 +1,7 @@
 const mongoose = require('mongoose')
 const supertest = require('supertest')
 const Blog = require('../models/blog')
+const User = require('../models/user')
 const app = require('../app')
 
 const api = supertest(app)
@@ -8,9 +9,26 @@ const api = supertest(app)
 const helper = require('./test_helper')
 const initialBlogs = helper.initialBlogs
 
+let user, token;
+
+// beforeAll create new user and save its token
+beforeAll(async () => {
+  user = await helper.userSetup()
+  const username = "root"
+  const password = "secret"
+  const login = await api.post('/api/login').send({username, password}).expect(200)
+  token = `Bearer ${login.body.token}`
+})
+
 beforeEach(async () => {
   await Blog.deleteMany({})
-  const blogObjects = initialBlogs.map(blog => new Blog(blog))
+  const blogObjects = initialBlogs.map(blog => new Blog({
+    title: blog.title,
+    author: blog.author,
+    url: blog.url,
+    likes: blog.likes,
+    user: user._id
+  }))
   const promiseArray = blogObjects.map(blog => blog.save())
   await Promise.all(promiseArray)
 })
@@ -34,6 +52,7 @@ describe('Fetching blogs', () => {
 describe("Creating blogs", () => {
 
   test('HTTP POST adds a new blog', async () => {
+
     const newBlog = {
       title: "Reacting to React",
       author: "Michael Chan",
@@ -44,6 +63,7 @@ describe("Creating blogs", () => {
     // Make a new blog
     await api
       .post('/api/blogs')
+      .set('Authorization', token)
       .send(newBlog)
       .expect(201)
       .expect('Content-Type', /application\/json/)
@@ -56,6 +76,7 @@ describe("Creating blogs", () => {
   })
 
   test('Blog likes property defaults to 0, if not provided', async () => {
+
     const newBlog = {
       title: "This post was not given a likes prop",
       author: "Michael Chan",
@@ -65,6 +86,7 @@ describe("Creating blogs", () => {
     // Make a new blog
     const response = await api
           .post('/api/blogs')
+          .set('Authorization', token)
           .send(newBlog)
           .expect(201)
           .expect('Content-Type', /application\/json/)
@@ -73,6 +95,7 @@ describe("Creating blogs", () => {
   })
 
   test('Blog with missing title or url gets "400 Bad Request" response', async () => {
+
     const noTitle = {
       author: "Michael Chan",
       url: "https://reactpatterns.com/"
@@ -83,8 +106,17 @@ describe("Creating blogs", () => {
       author: "Michael Chan"
     }
 
-    await api.post('/api/blogs').send(noTitle).expect(400)
-    await api.post('/api/blogs').send(noUrl).expect(400)
+    await api
+      .post('/api/blogs')
+      .set('Authorization', token)
+      .send(noTitle)
+      .expect(400)
+
+    await api
+      .post('/api/blogs')
+      .set('Authorization', token)
+      .send(noUrl)
+      .expect(400)
 
     // faulty blogs were not added
     const response = await api.get('/api/blogs')
@@ -95,11 +127,14 @@ describe("Creating blogs", () => {
 
 describe("Modifying blogs", () => {
   test('Can update the likes of a blog', async () => {
+
     const blogs = await helper.blogsInDb()
     const blogToUpdate = blogs[0]
     const newLikes = blogToUpdate.likes + 100;
 
-    const response = await api.put(`/api/blogs/${blogToUpdate.id}`)
+    const response = await api
+          .put(`/api/blogs/${blogToUpdate.id}`)
+          .set('Authorization', token)
           .send({likes: newLikes})
           .expect(200)
           .expect('Content-Type', /application\/json/)
@@ -109,9 +144,13 @@ describe("Modifying blogs", () => {
   })
 
   test('Can delete a blog', async () => {
+
     const blogsBeforeDeletion = await helper.blogsInDb()
     const blogToDelete = blogsBeforeDeletion[0]
-    await api.delete(`/api/blogs/${blogToDelete.id}`).expect(204)
+    await api
+      .delete(`/api/blogs/${blogToDelete.id}`)
+      .set('Authorization', token)
+      .expect(204)
 
     const blogsAfterDeletion = await helper.blogsInDb()
     expect(blogsAfterDeletion).toHaveLength(blogsBeforeDeletion.length - 1)
@@ -124,5 +163,6 @@ describe("Modifying blogs", () => {
 
 // Might need teardown file too
 afterAll(async () => {
+  await User.deleteMany({})
   await mongoose.connection.close()
 })
